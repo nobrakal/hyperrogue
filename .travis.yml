@@ -1,6 +1,10 @@
 language: cpp
 services:
   - docker
+cache:
+  directories:
+  - $HOME/AppData/Local/Temp/chocolatey
+  - /C/tools/msys64
 matrix:
   include:
   - os: linux
@@ -120,8 +124,43 @@ matrix:
       HYPERROGUE_USE_GLEW=1
       HYPERROGUE_USE_PNG=1
       HYPERROGUE_USE_ROGUEVIZ=1
+  - os: windows
+    compiler: gcc
+    env: >-
+      TRAVIS_OS_NAME=windows
+      TRAVIS_COMPILER_NAME=gcc
+      TRAVIS_BUILD_SYSTEM=Makefile
+      HYPERROGUE_USE_GLEW=1
+      HYPERROGUE_USE_PNG=1
+      HYPERROGUE_USE_ROGUEVIZ=1
+  - os: windows
+    compiler: gcc
+    env: >-
+      TRAVIS_OS_NAME=windows
+      TRAVIS_COMPILER_NAME=gcc
+      TRAVIS_BUILD_SYSTEM=autotools
+      HYPERROGUE_USE_GLEW=1
+      HYPERROGUE_USE_PNG=1
+      HYPERROGUE_USE_ROGUEVIZ=1
 
 before_install:
+- |-
+  # Set up MinGW64 if needed
+  if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+    [[ ! -f C:/tools/msys64/msys2_shell.cmd ]] && rm -rf C:/tools/msys64
+    # remove existing mingw installation
+    rm -rf /C/ProgramData/chocolatey/lib/mingw
+    # choco uninstall -y mingw
+    choco upgrade --no-progress -y msys2
+    export MSYS2='cmd //C RefreshEnv.cmd '
+    export MSYS2+='& set MSYS=winsymlinks:nativestrict '
+    export MSYS2+='& C:\\tools\\msys64\\msys2_shell.cmd -defterm -no-start'
+    export MINGW64="$MSYS2 -mingw64 -full-path -here -c "\"\$@"\" --"
+    export MSYS2+=" -msys2 -c "\"\$@"\" --"
+    $MSYS2 pacman -S --noconfirm --needed mingw-w64-x86_64-gcc make
+    export PATH=/C/tools/msys64/mingw64/bin:$PATH
+    setx -m PATH "C:\\tools\\msys64\\mingw64\\bin;%PATH%"
+  fi
 - |-
   # Install SDL
   if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
@@ -132,6 +171,9 @@ before_install:
     brew install sdl sdl_gfx sdl_mixer sdl_ttf
     # work around https://stackoverflow.com/questions/51034399/ for now
     (cd /usr/local/include && ln -sf SDL/SDL.h)
+  elif [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+    $MSYS2 pacman -S --noconfirm --needed mingw-w64-x86_64-SDL mingw-w64-x86_64-SDL_gfx mingw-w64-x86_64-SDL_mixer mingw-w64-x86_64-SDL_ttf
+    sed -i'.orig' 's/<SDL.h>/"SDL.h"/' /C/tools/msys64/mingw64/include/SDL/SDL_gfxPrimitives.h # otherwise header can't be located
   else
     exit 'Unsupported OS'
   fi
@@ -142,6 +184,8 @@ before_install:
       sudo apt-get install -qq libglew-dev
     elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew install glew
+    elif [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      $MSYS2 pacman -S --noconfirm --needed mingw-w64-x86_64-glew mingw-w64-x86_64-mesa
     else
       exit 'Unsupported OS'
     fi
@@ -153,29 +197,36 @@ before_install:
       echo 'libpng is installed by default'
     elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew install libpng
+    elif [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+      $MSYS2 pacman -S --noconfirm --needed mingw-w64-x86_64-libpng
     else
       exit 'Unsupported OS'
     fi
   fi
 - |-
   # Install autotools if asked for
-  if [[ "$TRAVIS_USE_AUTOTOOLS" == "1" ]]; then
-    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      echo 'autotools is installed by default'
-    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      brew install automake
-    else
-      exit 'Unsupported OS'
-    fi
+  if [[ "$TRAVIS_BUILD_SYSTEM" == "autotools" && "$TRAVIS_OS_NAME" == "windows" ]]; then
+    $MSYS2 pacman -S --noconfirm --needed automake-wrapper autoconf
+  fi
+- |-
+  # Prepare MinGW DLLs
+  if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
+    cp /C/tools/msys64/mingw64/bin/*.dll .
   fi
 
 script:
 - |-
   # Build hyperrogue.
-  if [[ "$TRAVIS_BUILD_SYSTEM" == "autotools" ]]; then
+  if [[ "$TRAVIS_BUILD_SYSTEM" == "autotools" && "$TRAVIS_OS_NAME" == "windows" ]]; then
+    $MINGW64 autoreconf -vi
+    $MINGW64 ./configure CXXFLAGS="-W -Wall -Wextra -Werror -Wno-unused-parameter -Wno-maybe-uninitialized -Wno-unknown-warning-option"
+    $MINGW64 make
+  elif [[ "$TRAVIS_BUILD_SYSTEM" == "autotools" ]]; then
     autoreconf -vi
     ./configure CXXFLAGS="-W -Wall -Wextra -Werror -Wno-unused-parameter -Wno-maybe-uninitialized -Wno-unknown-warning-option"
     make
+  elif [[ "$TRAVIS_BUILD_SYSTEM" == "Makefile" && "$TRAVIS_OS_NAME" == "windows" ]]; then
+    $MINGW64 make -f Makefile.simple
   elif [[ "$TRAVIS_BUILD_SYSTEM" == "Makefile" ]]; then
     make -f Makefile.simple
   elif [[ "$TRAVIS_BUILD_SYSTEM" == "mymake" ]]; then
@@ -205,3 +256,14 @@ script:
 - |-
   # Test "sudo make install".
   if [[ "$TRAVIS_BUILD_SYSTEM" == "autotools" ]]; then sudo make install; fi
+
+before_cache:
+- |-
+  # Fix up Windows environment for caching
+  if [[ $TRAVIS_OS_NAME == "windows" ]]; then
+    # https://unix.stackexchange.com/a/137322/107554
+    $MSYS2 pacman -Sc --noconfirm
+    # clean up various volatile things so that they don't invalidate the cache
+    rm -rf /C/tools/msys64/var/log/*
+    rm -f /C/tools/msys64/update.log /C/tools/msys64/mingw64/include/SDL/SDL_gfxPrimitives.h.orig
+  fi
