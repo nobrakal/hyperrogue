@@ -24,7 +24,7 @@ static constexpr ld degree = A_PI / 180;
 static const ld golden_phi = (sqrt(5)+1)/2;
 static const ld log_golden_phi = log(golden_phi);
 
-constexpr ld operator"" _deg(long double deg) { return deg * A_PI / 180; }
+constexpr ld operator""_deg(long double deg) { return deg * A_PI / 180; }
 #endif
 
 eGeometry geometry;

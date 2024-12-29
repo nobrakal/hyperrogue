@@ -507,7 +507,7 @@ EX namespace bt {
         }
       }
 
-    const transmatrix iadj(heptagon *h, int dir) { heptagon *h1 = h->cmove(dir); return adj(h1, h->c.spin(dir)); }
+    transmatrix iadj(heptagon *h, int dir) { heptagon *h1 = h->cmove(dir); return adj(h1, h->c.spin(dir)); }
   
     void virtualRebase(heptagon*& base, transmatrix& at) override {
     
