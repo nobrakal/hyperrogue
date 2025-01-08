@@ -339,7 +339,6 @@ EX void create_yasc_message() {
   bool in_ctx = true;
 
   set<string> blocks;
-  int index = 0;
   for(auto c: all) {
     if(c.type == miENTITY && !captures.count({c.where, blocking_monster_name(c)})) blocks.insert(blocking_monster_name(c));
     else if(c.type == miWALL && c.subtype == siMONSTER && !captures.count({c.where, blocking_monster_name(c)})) blocks.insert(blocking_monster_name(c));
@@ -359,7 +358,6 @@ EX void create_yasc_message() {
       else if(c.where && c.where->wall != cwt.at->wall) blocks.insert(dnameof(c.where->wall));
       }
     else if(c.type == siWARP) blocks.insert("warp");
-    index++;
     }
 
   if(!blocks.empty()) {

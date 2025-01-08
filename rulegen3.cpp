@@ -1288,9 +1288,6 @@ EX void test_transducers() {
           swap(cum, result);
           ctid = t_origin[ctid].at->cmove(c)->id;
           }
-        int err = 0;
-        for(auto duc: cum) for(auto p: duc.second.t)
-          if(p.first.first == ENDED || p.first.second != p.first.first) err++;
         throw_identity_errors(cum, cyc.dirs);
         if(id_size != isize(cum)) println(hlog, "error: identity not recovered correctly");
         }

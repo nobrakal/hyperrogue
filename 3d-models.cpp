@@ -548,8 +548,6 @@ void geometry_information::make_revolution_cut(hpcshape &sh, int each, ld push, 
   
   auto gbody = body;
   
-  int it = 0;
-  
   vector<int> nextid(n);
   vector<int> lastid(n);
   vector<bool> stillin(n, true);
@@ -558,7 +556,6 @@ void geometry_information::make_revolution_cut(hpcshape &sh, int each, ld push, 
   nextid[n-1] = n-1; lastid[0] = 0;
 
   while(true) {
-    it++;
     int cand = -1;
     ld cv = 0;
     for(int i=1; i<n-1; i++) if(stillin[i]) {
@@ -787,7 +784,6 @@ void geometry_information::adjust_eye(hpcshape& eye, hpcshape head, ld shift_eye
   hyperpoint pscenter = psmin(center);
   
   ld pos = 0;
-  int qty = 0, qtyall = 0;
   
   vector<hyperpoint> pss;
   
@@ -800,8 +796,7 @@ void geometry_information::adjust_eye(hpcshape& eye, hpcshape head, ld shift_eye
   ld mindist = 1e9;
   for(int i=0; i<isize(pss); i+=3) if(pss[i][2] < zmid || (WDIM == 3 && !gproduct)) {
     ld d = sqhypot_d(2, pss[i]-pscenter) + sqhypot_d(2, pss[i+1]-pscenter) + sqhypot_d(2, pss[i+2]-pscenter);
-    if(d < mindist) mindist = d, pos = min(min(pss[i][2], pss[i+1][2]), pss[i+2][2]), qty++;
-    qtyall++;
+    if(d < mindist) mindist = d, pos = min(min(pss[i][2], pss[i+1][2]), pss[i+2][2]);
     }
   
   if(&eye == &shSkullEyes) cgi.eyelevel_human = pos = zc(eyepos) - 0.06 * SH * 0.05;
