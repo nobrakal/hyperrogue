@@ -1567,7 +1567,7 @@ void geometry_information::prepare_shapes() {
   bshape(shHood, PPR::MONSTER_HAT0, scalefactor, 123);
   bshape(shPirateHood, PPR::MONSTER_HAT0, scalefactor, 125);
   bshape(shEyepatch, PPR::MONSTER_HAT1, scalefactor, 126);
-  bshape(shPHead, PPR::MONSTER_HEAD, scalefactor, 127);
+  bshape(shPHead, PPR::MONSTER_HAIR, scalefactor, 127);
   shGolemhead = shDisk; shGolemhead.prio = PPR::MONSTER_HEAD;
   bshape(shFemaleHair, PPR::MONSTER_HAIR, scalefactor, 128);
   bshape(shWitchHair, PPR::MONSTER_HAIR, scalefactor, 129);
